@@ -1,11 +1,12 @@
-var map = L.map('map').setView([60.190007, 24.938611], 10);
+var map = L.map('map').setView([60.240007, 24.908611], 11);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxZoom: 17,
+    minZoom: 11,
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-const intervall = 180;
+const intervall = 300;
 
 const bad_col = [253, 76, 10]
 const medium_col = [250, 217, 15]
@@ -23,46 +24,65 @@ function rgbToHex(r, g, b) {
 }
 
 
-$.getJSON("scrape/datasets/hsl/polygons.json", function (polygons) {
-    console.log("got polygons", polygons);
+$.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
+    console.log("got hexagons", hexagons);
 
     $.getJSON("scrape/datasets/hsl/time_map.json", function (time_map) {
         console.log("got time map", time_map);
 
-        var feature_groups = []
+        $.getJSON("scrape/datasets/hsl/initial.json", function (initial) {
 
-        for (t in time_map) {
-            feature_groups.push(new L.FeatureGroup());
-        }
+            console.log("got initial times", initial);
 
-        for (let polygon = 0; polygon < polygons.length; polygon++) {
-            if (polygons[polygon]['time'] > 7020) continue;
-            let ind = Math.floor(polygons[polygon]['time'] / intervall)
-            //console.log(polygons[polygon]['time'], col, rgbToHex(col[0], col[1], col[2]))
-            addPolygon(polygons[polygon]['shape'], ind, time_map[intervall * ind], polygons[polygon], feature_groups)
+            var feature_groups = []
 
-        }
+            for (t in time_map) {
+                feature_groups.push(new L.FeatureGroup());
+            }
 
-        console.log(feature_groups)
+            for (let polygon = 0; polygon < hexagons.length; polygon++) {
+                let current = hexagons[polygon];
+                //console.log(current)
 
-        for (feat in feature_groups) {
-            let t = feature_groups[feat]
-            t.on('mouseover', function (e) {
-                for (i in t._layers) {
-                    t._layers[i].setStyle({
-                        fillOpacity: 1
-                    })
+                let time = initial[current.id]
+
+                // hexagon can not be reached
+                if (time == undefined) continue;
+
+                let ind = Math.floor(time / intervall)
+
+                if (time >= 8400) {
+                    ind = 29
                 }
-            });
-            t.on('mouseout', function (e) {
-                for (i in t._layers) {
-                    t._layers[i].setStyle({
-                        fillOpacity: .45
+
+                //console.log(time, time_map[intervall * ind])
+                //console.log(polygons[polygon]['time'], col, rgbToHex(col[0], col[1], col[2]))
+                addPolygon(current.geometry.coordinates[0], ind, time_map[intervall * ind], { name: current.id, time: time }, feature_groups)
+
+            }
+
+            console.log(feature_groups)
+
+            for (feat in feature_groups) {
+                let t = feature_groups[feat]
+                t.timeid = feat;
+
+                t.on('mouseover', function (e) {
+                    t.setStyle({
+                        fillOpacity: 1,
+                        fillColor: '#002561'
                     })
-                }
-            });
-            t.addTo(map)
-        }
+                });
+                t.on('mouseout', function (e) {
+                    let col = time_map[intervall * t.timeid]
+                    t.setStyle({
+                        fillOpacity: .8,
+                        fillColor: rgbToHex(col[0], col[1], col[2])
+                    })
+                });
+                t.addTo(map)
+            }
+        });
     });
 })
 
@@ -82,7 +102,8 @@ function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
 }
 
 function addPolygon(ponits, ind, col, pol, groups) {
-    let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 1, color: '#000', fillOpacity: .45 })
+
+    let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 0, color: '#000', fillOpacity: .8 })
     poly.bindPopup(`Name: ${pol.name}, Time: ${pol.time}`);
     groups[ind].addLayer(poly)
 }
