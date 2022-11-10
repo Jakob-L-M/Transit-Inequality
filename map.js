@@ -30,7 +30,7 @@ $.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
     $.getJSON("scrape/datasets/hsl/time_map.json", function (time_map) {
         console.log("got time map", time_map);
 
-        $.getJSON("scrape/datasets/hsl/initial.json", function (initial) {
+        $.getJSON("scrape/datasets/hsl/090000/hex_1886.json", function (initial) {
 
             console.log("got initial times", initial);
 
