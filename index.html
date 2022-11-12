@@ -16,6 +16,7 @@
 
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
+   <script src="https://d3js.org/d3.v7.min.js"></script>
 
    <script src="./map.js" defer></script>
 
@@ -25,6 +26,17 @@
 </head>
 <body>
     <div id="map"></div>
+
+    <div id="range_div">
+    <input type="range" min="0" max="20" step="4" id="start_time" onchange="setMap()"></input>
+    </div>
+    <div id="time_bar">
+
+    </div>
+
+    <div id="header"></div>
+
+    <div id="footer"></div>
     
 </body>
 </html>

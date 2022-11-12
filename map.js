@@ -26,7 +26,7 @@ function rgbToHex(r, g, b) {
 var feature_groups = []
 var HEXAGONS = [];
 var TIMEMAP = [];
-var TIME_OF_DAY = '200000'
+var hex_id = 'hex_1746'
 
 $.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
 
@@ -36,21 +36,55 @@ $.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
 
         TIMEMAP = time_map;
 
+        var svg = d3.select('#time_bar').append("svg")
+            .attr("height", "90vh")
+            .attr("width", "5vw")
+
+
+        var height = $(window).height()
+        var width = $(window).width()
+
+        let c = -1;
+        var rect = svg.selectAll("rect")
+            .data(TIMEMAP).enter()
+            .append("rect")
+            .attr("id", (d) => `_${d[3]}`)
+            .attr("x", 0)
+            .attr("y", (d) => `${3 * d[3]}vh`)
+            .attr("height", `3vh`)
+            .attr("width", "2vw")
+            .attr("fill", (d) => rgbToHex(d[0], d[1], d[2]))
+            .on("mouseover", (d) => hover_in(d.target.id.substring(1)))
+            .on("mouseout", (d) => hover_out(d.target.id.substring(1)))
+
+        c = 0;
+        var text = svg.selectAll("text")
+            .data(TIMEMAP).enter()
+            .append("text")
+            .attr('text-anchor', 'left')
+            //.attr('x', (d) => `${3*c}vh`)
+            //.attr("y", (d) => {c += 1; return `${3*c}vh`})
+            .attr('transform', (d) => { c++; return `translate(${0.023 * width}, ${(c - 0.3) * (0.9 * height / 30)})` })
+            .style('font-family', 'Helvetica')
+            .style('font-size', (d) => { c = 0; return '1.5vh' })
+            .text((d) => { c++; return `${c * 5}` });
+
         for (t in time_map) {
             feature_groups.push(new L.FeatureGroup());
         }
 
-        $.getJSON("scrape/datasets/hsl/120000/hex_1746.json", function (initial) {
-
-            // console.log("got initial times", initial);
-
-            setMap('hex_1746');
-        });
+        setMap();
     });
 })
 
+function setMapWithHex(hex) {
+    hex_id = hex;
+    setMap()
+}
 
-function setMap(hex_id) {
+function setMap() {
+
+    var TIME_OF_DAY = `${(0 + document.getElementById('start_time').value).slice(-2)}0000`
 
     for (feat in feature_groups) {
         feature_groups[feat].clearLayers();
@@ -67,14 +101,14 @@ function setMap(hex_id) {
             // hexagon can not be reached
             if (time == undefined) continue;
 
-            let ind = Math.floor(time / intervall) + 1
+            let ind = Math.floor(time / intervall)
 
             if (time >= 8400) {
-                ind = 30
+                ind = 29
             }
 
             if (time == -1) {
-                ind = 0
+                ind = 30
             }
 
             //console.log(time, time_map[intervall * ind])
@@ -88,23 +122,34 @@ function setMap(hex_id) {
             t.timeid = feat;
 
             t.on('mouseover', function (e) {
-                t.setStyle({
-                    fillOpacity: 1,
-                    weight: 2,
-                })
+                hover_in(t.timeid)
             });
             t.on('mouseout', function (e) {
-                let col = TIMEMAP[t.timeid]
-                let hex = rgbToHex(col[0], col[1], col[2])
-                t.setStyle({
-                    fillOpacity: .85,
-                    fillColor: hex,
-                    weight: 0,
-                })
+                hover_out(t.timeid)
             });
             t.addTo(map)
         }
     });
+}
+
+function hover_out(id) {
+    let col = TIMEMAP[id]
+    let hex = rgbToHex(col[0], col[1], col[2])
+    feature_groups[id].setStyle({
+        fillOpacity: .85,
+        fillColor: hex,
+        weight: 0,
+    })
+
+    d3.select(`#_${id}`).style('fill', hex)
+}
+
+function hover_in(id) {
+    feature_groups[id].setStyle({
+        fillOpacity: 1,
+        weight: 2,
+    })
+    d3.select(`#_${id}`).style('fill', '#000')
 }
 
 function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
@@ -124,6 +169,6 @@ function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
 
 function addPolygon(ponits, ind, col, pol) {
     let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 0, color: '#000', fillOpacity: .85 })
-    poly.bindPopup(`Time to get here: ${Math.floor(pol.time / 3600)}:${pol.time % 3600}:${pol.time % 60}h, <button onClick="setMap('${pol.name}')">Set origin here</button>`);
+    poly.bindPopup(`Time to get here: ${Math.floor(pol.time / 3600)}:${Math.floor((pol.time % 3600) / 60)}:${pol.time % 60}h, <button onClick="setMapWithHex('${pol.name}')">Set origin here</button>`);
     feature_groups[ind].addLayer(poly)
 }
