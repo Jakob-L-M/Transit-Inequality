@@ -6,7 +6,7 @@ from task import time_bfs
 # origin = '1331140' # Aalto metro station
 # pbar = tqdm(total=len(stops)-NUM_STOPS)
 
-PROCESSES = 6
+PROCESSES = 8
 
 FOLDER = 'hsl'
 
@@ -63,16 +63,18 @@ if __name__ == '__main__':
 
     print('Total points:', len(stops))
 
-    arr = []
-    for s in stops:
-        if stops[s]['type'] == 'hexagon' and not os.path.exists(FOLDER + '/090000/' + s + '.json'):
-            args = {'FOLDER': FOLDER,
-            'stops': stops,
-            'stop_data': stop_data,
-            'trips': trips,
-            'distances': distances,
-            'origin': s}
+    for s_time in ['000000', '040000', '080000', '120000', '160000', '200000']:
+        arr = []
+        for s in stops:
+            if stops[s]['type'] == 'hexagon' and not os.path.exists(FOLDER + '/' + s_time + '/' + s + '.json'):
+                args = {'FOLDER': FOLDER,
+                'stops': stops,
+                'stop_data': stop_data,
+                'trips': trips,
+                'distances': distances,
+                'origin': s,
+                'start_time': s_time}
 
-            arr.append(args)
+                arr.append(args)
 
-    run(arr)
+        run(arr)
