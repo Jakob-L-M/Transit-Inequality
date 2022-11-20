@@ -1,5 +1,6 @@
 const request = require('request');
 var fs = require('fs');
+const { time } = require('console');
 
 // local docker:
 // http://localhost:9080/otp/routers/hsl/index/graphql
@@ -17,12 +18,12 @@ async function get_rout(lon1, lat1, lon2, lat2) {
         from: {lat: ${lat1}, lon: ${lon1}},
         to: {lat: ${lat2}, lon: ${lon2}},
         numItineraries: 1,
-        date: "2022-09-26",
-        time: "09:00:00",
+        date: "2022-11-22",
+        time: "08:00:00",
         transportModes: [{mode: BUS}, {mode: RAIL}, {mode:TRAM}, {mode: FERRY}, {mode:WALK}, {mode:SUBWAY}],
         walkReluctance: 1,
-        walkBoardCost: 60,
-        minTransferTime: 120,
+        walkBoardCost: 0,
+        minTransferTime: 0,
         walkSpeed: 1.6,
         ) {
         date
@@ -85,10 +86,13 @@ let stop_req = {
     `
 }
 
-if (fs.existsSync('time.json')) {
+if (fs.existsSync('datasets/hsl/hexahons.json') | true) {
 
-    var stops = fs.readFileSync('time.json');
-    build_times(JSON.parse(stops))
+    var stops = JSON.parse(fs.readFileSync('./datasets/hsl/hexagons.json'));
+
+    console.log(stops)
+
+    build_times(stops)
 } else {
     var stops = []
     request(stop_req, function (error, response, body) {
@@ -122,9 +126,10 @@ async function build_times(stops) {
     // console.log(stops[0], stops[1])
 
     // create dictionary
-    stop_dic = {}
+    var times = JSON.parse(fs.readFileSync('./time.json'))
+    /*
     for (let i = 0; i < stops.length; i++) {
-        stop_dic[stops[i]['name']] = i
+        stop_dic[stops[i]['id']] = i
     }
 
     // populate times
@@ -143,81 +148,87 @@ async function build_times(stops) {
         }
     })
 
+    */
 
-    for (let i = 1; i < stops.length; i++) {
-        for (let j = 0; j < stops.length; j++) {
+    const origin = stops[1746] // Central station
 
-            let known = false
-            if (i != j) {
-                try {
+    console.log('Origin:', origin)
 
-                    if (stops[i]['times'][j] == -1) {
-                        let rout = await get_rout(stops[i]['lon'], stops[i]['lat'], stops[j]['lon'], stops[j]['lat'])
-                        let transit = rout['data']['plan']['itineraries'][0]['legs']
-
-                        //console.log(transit)
-
-                        for (let s = 0; s < transit.length; s++) {
-
-                            for (let e = s; e < transit.length; e++) {
-
-                                var start = -1;
-                                if (transit[s]['from']['name'] == 'Origin') {
-                                    start = i;
-                                } else if (stop_dic[transit[s]['from']['name']]) {
-                                    start = stop_dic[transit[s]['from']['name']]
-                                } else {
-                                    console.log('\tStation', transit[s]['from']['name'], 'not found')
-                                    continue;
-                                }
-
-                                var end = -1;
-                                if (transit[e]['to']['name'] == 'Destination') {
-                                    end = j;
-                                } else if (stop_dic[transit[e]['to']['name']]) {
-                                    end = stop_dic[transit[e]['to']['name']]
-                                } else {
-                                    console.log('\tStation', transit[e]['to']['name'], 'not found')
-                                    continue
-                                }
-
-                                let time = transit[e]['endTime'] - transit[s]['startTime']
-                                time = Math.floor(time / 1000)
-                                if (stops[start]['times'][end] == -1) {
-                                    stops[start]['times'][end] = time
-                                } else {
-
-                                    stops[start]['times'][end] = Math.min(time, stops[start]['times'][end])
-                                    stops[end]['times'][start] = Math.min(time, stops[end]['times'][start])
-                                }
-
-                            }
-                        }
+    const start_time = 1669096800
 
 
-                    } else {
-                        known = true
-                    }
+    for (let i = 30; i < stops.length; i++) {
+        // for (let j = 0; j < stops.length; j++) {
 
-                    var time = stops[i]['times'][j]
-                    console.log(`${stops[i]['name']} -> ${stops[j]['name']}: ${Math.floor(time / 3600)}h ${Math.floor((time % 3600) / 60)}m ${Math.floor(time % 60)}s (${i * stops.length + j + 1}/${stops.length * stops.length})`)
 
+        let rout = await get_rout(origin.center['lon'], origin.center['lat'], stops[i].center['lon'], stops[i].center['lat'])
+        let time = 0;
+        try {
+            let transit = rout['data']['plan']['itineraries'][0]['legs']
+
+            //console.log(transit)
+
+            time = transit[transit.length - 1].endTime / 1000 - start_time
+
+        } catch {
+            time = -1;
+        }
+
+        times[stops[i].id] = time;
+
+        console.log(`${origin.id} -> ${stops[i].id}: ${Math.floor(time / 3600)}h ${Math.floor((time % 3600) / 60)}m ${Math.floor(time % 60)}s - ${time} - (${i}/${stops.length})`)
+
+
+        if (i % 10 == 0) {
+            fs.writeFile("time.json", JSON.stringify(times), function (err) {
+                if (err) {
+                    console.log(err);
                 }
-                catch (err) {
-                    console.log(`${stops[i]['name']} -> ${stops[j]['name']}: ERROR`)
-                }
-            } else {
-                console.log(`${stops[i]['name']} -> ${stops[j]['name']}: 0h 0m 0s (${i * stops.length + j + 1}/${stops.length * stops.length})`)
-                stops[i]['times'][j] = 0;
-            }
+            });
+        }
+        continue;
+        for (let s = 0; s < transit.length; s++) {
 
-            if (!known && j % 15 == 0) {
-                fs.writeFile("time.json", JSON.stringify(stops), function (err) {
-                    if (err) {
-                        console.log(err);
-                    }
-                });
+            for (let e = s; e < transit.length; e++) {
+
+                var start = -1;
+                if (transit[s]['from']['name'] == 'Origin') {
+                    start = i;
+                } else if (stop_dic[transit[s]['from']['name']]) {
+                    start = stop_dic[transit[s]['from']['name']]
+                } else {
+                    console.log('\tStation', transit[s]['from']['name'], 'not found')
+                    continue;
+                }
+
+                var end = -1;
+                if (transit[e]['to']['name'] == 'Destination') {
+                    end = j;
+                } else if (stop_dic[transit[e]['to']['name']]) {
+                    end = stop_dic[transit[e]['to']['name']]
+                } else {
+                    console.log('\tStation', transit[e]['to']['name'], 'not found')
+                    continue
+                }
+
+                let time = transit[e]['endTime'] - transit[s]['startTime']
+                time = Math.floor(time / 1000)
+                if (stops[start]['times'][end] == -1) {
+                    stops[start]['times'][end] = time
+                } else {
+
+                    stops[start]['times'][end] = Math.min(time, stops[start]['times'][end])
+                    stops[end]['times'][start] = Math.min(time, stops[end]['times'][start])
+                }
+
             }
+        }
+
+
+        //var time = stops[i]['times'][j]
+        //console.log(`${stops[i]['name']} -> ${stops[j]['name']}: ${Math.floor(time / 3600)}h ${Math.floor((time % 3600) / 60)}m ${Math.floor(time % 60)}s (${i * stops.length + j + 1}/${stops.length * stops.length})`)
+
+        /*
         }
 
         fs.writeFile("time.json", JSON.stringify(stops), function (err) {
@@ -225,8 +236,13 @@ async function build_times(stops) {
                 console.log(err);
             }
         });
-
+        */
         console.log('\n###############################\n')
     }
+    fs.writeFile("time.json", JSON.stringify(times), function (err) {
+        if (err) {
+            console.log(err);
+        }
+    });
 }
 
