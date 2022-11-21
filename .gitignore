@@ -4,3 +4,5 @@ package-lock.json
 *.csv
 *.json
 *-checkpoint.ipynb
+interpreter
+__pycache__
