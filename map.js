@@ -23,6 +23,10 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(Math.floor(r)) + componentToHex(Math.floor(g)) + componentToHex(Math.floor(b));
 }
 
+function seconds_to_time(seconds) {
+    return `${("0" + Math.floor(seconds / 3600)).slice(-2)}:${("0" + Math.floor((seconds % 3600) / 60)).slice(-2)}:${("0" + seconds % 60).slice(-2)}h`
+}
+
 var feature_groups = []
 var HEXAGONS = [];
 var TIMEMAP = [];
@@ -58,16 +62,16 @@ $.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
             .on("mouseout", (d) => hover_out(d.target.id.substring(1)))
 
         c = 0;
-        var text = svg.selectAll("text")
-            .data(TIMEMAP).enter()
-            .append("text")
-            .attr('text-anchor', 'left')
-            //.attr('x', (d) => `${3*c}vh`)
-            //.attr("y", (d) => {c += 1; return `${3*c}vh`})
-            .attr('transform', (d) => { c++; return `translate(${0.023 * width}, ${(c - 0.3) * (0.9 * height / 30)})` })
-            .style('font-family', 'Helvetica')
-            .style('font-size', (d) => { c = 0; return '1.5vh' })
-            .text((d) => { c++; return `${c * 5}` });
+        // var text = svg.selectAll("text")
+        //     .data(TIMEMAP).enter()
+        //     .append("text")
+        //     .attr('text-anchor', 'left')
+        //     //.attr('x', (d) => `${3*c}vh`)
+        //     //.attr("y", (d) => {c += 1; return `${3*c}vh`})
+        //     .attr('transform', (d) => { c++; return `translate(${0.023 * width}, ${(c - 0.3) * (0.9 * height / 30)})` })
+        //     .style('font-family', 'Helvetica')
+        //     .style('font-size', (d) => { c = 0; return '1.5vh' })
+        //     .text((d) => { c++; return `${c * 5}` });
 
         for (t in time_map) {
             feature_groups.push(new L.FeatureGroup());
@@ -130,6 +134,8 @@ function setMap() {
             t.addTo(map)
         }
     });
+
+    document.getElementById('time_text').textContent = `Hover over a hexagon to see the time it takes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
 }
 
 function hover_out(id) {
@@ -142,6 +148,8 @@ function hover_out(id) {
     })
 
     d3.select(`#_${id}`).style('fill', hex)
+
+    document.getElementById('time_text').textContent = `Hover over a hexagon to see the time it takes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
 }
 
 function hover_in(id) {
@@ -150,6 +158,8 @@ function hover_in(id) {
         weight: 2,
     })
     d3.select(`#_${id}`).style('fill', '#000')
+
+    document.getElementById('time_text').textContent = `It takes ${seconds_to_time(id*intervall)} - ${seconds_to_time((id*intervall)+intervall)} minutes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
 }
 
 function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
@@ -169,6 +179,6 @@ function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
 
 function addPolygon(ponits, ind, col, pol) {
     let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 0, color: '#000', fillOpacity: .85 })
-    poly.bindPopup(`Time to get here: ${Math.floor(pol.time / 3600)}:${Math.floor((pol.time % 3600) / 60)}:${pol.time % 60}h, <button onClick="setMapWithHex('${pol.name}')">Set origin here</button>`);
+    poly.bindPopup(`Time to get here: ${seconds_to_time(pol.time)}, <button onClick="setMapWithHex('${pol.name}')">Set origin here</button>`);
     feature_groups[ind].addLayer(poly)
 }

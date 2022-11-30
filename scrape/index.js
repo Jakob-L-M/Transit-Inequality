@@ -90,7 +90,7 @@ if (fs.existsSync('datasets/hsl/hexahons.json') | true) {
 
     var stops = JSON.parse(fs.readFileSync('./datasets/hsl/hexagons.json'));
 
-    console.log(stops)
+    //console.log(stops)
 
     build_times(stops)
 } else {
@@ -157,7 +157,7 @@ async function build_times(stops) {
     const start_time = 1669096800
 
 
-    for (let i = 30; i < stops.length; i++) {
+    for (let i = 3280; i < stops.length; i++) {
         // for (let j = 0; j < stops.length; j++) {
 
 
@@ -176,7 +176,7 @@ async function build_times(stops) {
 
         times[stops[i].id] = time;
 
-        console.log(`${origin.id} -> ${stops[i].id}: ${Math.floor(time / 3600)}h ${Math.floor((time % 3600) / 60)}m ${Math.floor(time % 60)}s - ${time} - (${i}/${stops.length})`)
+        console.log(`${origin.id} -> ${stops[i].id}: ${Math.floor(time / 3600)}h ${Math.floor((time % 3600) / 60)}m ${Math.floor(time % 60)}s - ${time} - (${i+1}/${stops.length})`)
 
 
         if (i % 10 == 0) {

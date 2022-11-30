@@ -2,6 +2,8 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    padding: 0;
+    background-color: rgba(19, 14, 49);
 }
 
 #map {
@@ -33,7 +35,55 @@ body {
 #time_bar {
     position: absolute;
     height: 90vh;
-    width: 4vw;
+    width: 2vw;
     left: 1vw;
     top: 4vh;
+    border: solid whitesmoke 2px;
+}
+
+p {
+    color: whitesmoke;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+#header {
+    height: 4vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    margin: 0;
+}
+
+#headline {
+    font-size: 3vh;
+    bottom: 0;
+    left: 5vw;
+    position: absolute;
+    margin: 0;
+}
+
+#ref {
+    font-size: 1.5vmin;
+    right: 5vw;
+    position: absolute;
+    margin-top: 0.3vmin; 
+    text-align: right;
+}
+
+#footer {
+    position: absolute;
+    top: 94vh;
+    left: 0;
+    width: 100vw;
+    margin: 0;
+}
+
+#time_text {
+    position: absolute;
+    text-align: left;
+    left: 5vw;
+    width: 90vw;
+    font-size: 2.2vh;
+    margin-top: 0.2vh;
 }
