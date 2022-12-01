@@ -32,11 +32,11 @@ var HEXAGONS = [];
 var TIMEMAP = [];
 var hex_id = 'hex_1746'
 
-$.getJSON("scrape/datasets/hsl/hexagons.json", function (hexagons) {
+$.getJSON("transit-inequality/hexagons.json", function (hexagons) {
 
     HEXAGONS = hexagons;
 
-    $.getJSON("scrape/datasets/hsl/time_map.json", function (time_map) {
+    $.getJSON("transit-inequality/time_map.json", function (time_map) {
 
         TIMEMAP = time_map;
 
@@ -94,7 +94,7 @@ function setMap() {
         feature_groups[feat].clearLayers();
     }
 
-    $.getJSON(`scrape/datasets/hsl/${TIME_OF_DAY}/${hex_id}.json`, function (times) {
+    $.getJSON(`transit-inequality/${TIME_OF_DAY}/${hex_id}.json`, function (times) {
 
         for (let polygon = 0; polygon < HEXAGONS.length; polygon++) {
             let current = HEXAGONS[polygon];
