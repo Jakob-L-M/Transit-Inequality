@@ -6,3 +6,5 @@ package-lock.json
 *-checkpoint.ipynb
 interpreter
 __pycache__
+*.zip
+*.pdf
