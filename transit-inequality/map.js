@@ -1,12 +1,11 @@
-var map = L.map('map').setView([60.240007, 24.908611], 11);
+var map = L.map('map').setView([60.190007, 24.938611], 10);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 17,
-    minZoom: 11,
+    maxZoom: 19,
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-const intervall = 300;
+const intervall = 180;
 
 const bad_col = [253, 76, 10]
 const medium_col = [250, 217, 15]
@@ -23,144 +22,49 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(Math.floor(r)) + componentToHex(Math.floor(g)) + componentToHex(Math.floor(b));
 }
 
-function seconds_to_time(seconds) {
-    return `${("0" + Math.floor(seconds / 3600)).slice(-2)}:${("0" + Math.floor((seconds % 3600) / 60)).slice(-2)}:${("0" + seconds % 60).slice(-2)}h`
-}
 
-var feature_groups = []
-var HEXAGONS = [];
-var TIMEMAP = [];
-var hex_id = 'hex_1746'
+$.getJSON("scrape/datasets/hsl/polygons.json", function (polygons) {
+    console.log("got polygons", polygons);
 
-$.getJSON("transit-inequality/hexagons.json", function (hexagons) {
+    $.getJSON("scrape/datasets/hsl/time_map.json", function (time_map) {
+        console.log("got time map", time_map);
 
-    HEXAGONS = hexagons;
-
-    $.getJSON("transit-inequality/time_map.json", function (time_map) {
-
-        TIMEMAP = time_map;
-
-        var svg = d3.select('#time_bar').append("svg")
-            .attr("height", "90vh")
-            .attr("width", "5vw")
-
-
-        var height = $(window).height()
-        var width = $(window).width()
-
-        let c = -1;
-        var rect = svg.selectAll("rect")
-            .data(TIMEMAP).enter()
-            .append("rect")
-            .attr("id", (d) => `_${d[3]}`)
-            .attr("x", 0)
-            .attr("y", (d) => `${3 * d[3]}vh`)
-            .attr("height", `3vh`)
-            .attr("width", "2vw")
-            .attr("fill", (d) => rgbToHex(d[0], d[1], d[2]))
-            .on("mouseover", (d) => hover_in(d.target.id.substring(1)))
-            .on("mouseout", (d) => hover_out(d.target.id.substring(1)))
-
-        c = 0;
-        // var text = svg.selectAll("text")
-        //     .data(TIMEMAP).enter()
-        //     .append("text")
-        //     .attr('text-anchor', 'left')
-        //     //.attr('x', (d) => `${3*c}vh`)
-        //     //.attr("y", (d) => {c += 1; return `${3*c}vh`})
-        //     .attr('transform', (d) => { c++; return `translate(${0.023 * width}, ${(c - 0.3) * (0.9 * height / 30)})` })
-        //     .style('font-family', 'Helvetica')
-        //     .style('font-size', (d) => { c = 0; return '1.5vh' })
-        //     .text((d) => { c++; return `${c * 5}` });
+        var feature_groups = []
 
         for (t in time_map) {
-            feature_groups.push(new L.FeatureGroup());
+            feature_groups.push(new L.FeatureGroup({weight:1, color: '#000'}));
         }
 
-        setMap();
-    });
-})
-
-function setMapWithHex(hex) {
-    hex_id = hex;
-    setMap()
-}
-
-function setMap() {
-
-    var TIME_OF_DAY = `${(0 + document.getElementById('start_time').value).slice(-2)}0000`
-
-    for (feat in feature_groups) {
-        feature_groups[feat].clearLayers();
-    }
-
-    $.getJSON(`transit-inequality/${TIME_OF_DAY}/${hex_id}.json`, function (times) {
-
-        for (let polygon = 0; polygon < HEXAGONS.length; polygon++) {
-            let current = HEXAGONS[polygon];
-            //console.log(current)
-
-            let time = times[current.id]
-
-            // hexagon can not be reached
-            if (time == undefined) continue;
-
-            let ind = Math.floor(time / intervall)
-
-            if (time >= 8400) {
-                ind = 29
-            }
-
-            if (time == -1) {
-                ind = 30
-            }
-
-            //console.log(time, time_map[intervall * ind])
+        for (let polygon = 0; polygon < polygons.length; polygon++) {
+            if (polygons[polygon]['time'] > 5020) continue;
+            let ind = Math.floor(polygons[polygon]['time'] / intervall)
             //console.log(polygons[polygon]['time'], col, rgbToHex(col[0], col[1], col[2]))
-            addPolygon(current.geometry.coordinates[0], ind, TIMEMAP[ind], { name: current.id, time: time })
+            addPolygon(polygons[polygon]['shape'], ind, time_map[ind], polygons[polygon], feature_groups)
 
         }
+
+        console.log(feature_groups)
 
         for (feat in feature_groups) {
             let t = feature_groups[feat]
-            t.timeid = feat;
-
             t.on('mouseover', function (e) {
-                hover_in(t.timeid)
+                for (i in t._layers) {
+                    t._layers[i].setStyle({
+                        fillOpacity: 1
+                    })
+                }
             });
             t.on('mouseout', function (e) {
-                hover_out(t.timeid)
+                for (i in t._layers) {
+                    t._layers[i].setStyle({
+                        fillOpacity: .45
+                    })
+                }
             });
             t.addTo(map)
         }
     });
-
-    document.getElementById('time_text').textContent = `Hover over a hexagon to see the time it takes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
-}
-
-function hover_out(id) {
-    let col = TIMEMAP[id]
-    let hex = rgbToHex(col[0], col[1], col[2])
-    feature_groups[id].setStyle({
-        fillOpacity: .85,
-        fillColor: hex,
-        weight: 0,
-    })
-
-    d3.select(`#_${id}`).style('fill', hex)
-
-    document.getElementById('time_text').textContent = `Hover over a hexagon to see the time it takes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
-}
-
-function hover_in(id) {
-    feature_groups[id].setStyle({
-        fillOpacity: 1,
-        weight: 2,
-    })
-    d3.select(`#_${id}`).style('fill', '#000')
-
-    document.getElementById('time_text').textContent = `It takes ${seconds_to_time(id*intervall)} - ${seconds_to_time((id*intervall)+intervall)} minutes to get there. Current starting time: ${document.getElementById('start_time').value}:00`
-}
+})
 
 function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
     var circle = L.circle([lat, lon], {
@@ -177,8 +81,8 @@ function addCircle(lon, lat, edgecol, col, size, from = "", to = "", time = 0) {
     circle.addTo(map);
 }
 
-function addPolygon(ponits, ind, col, pol) {
-    let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 0, color: '#000', fillOpacity: .85 })
-    poly.bindPopup(`Time to get here: ${seconds_to_time(pol.time)}, <button onClick="setMapWithHex('${pol.name}')">Set origin here</button>`);
-    feature_groups[ind].addLayer(poly)
+function addPolygon(ponits, ind, col, pol, groups) {
+    let poly = L.polygon(ponits, { fillColor: rgbToHex(col[0], col[1], col[2]), weight: 0.5, color: '#000', fillOpacity: .35 })
+    poly.bindPopup(`Name: ${pol.name}, Time: ${pol.time}`);
+    groups[ind].addLayer(poly)
 }
